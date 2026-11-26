@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тавлеи Древней Руси — Реконструкция Сергея Крюкова</title>
+<style>
+  :root {
+    --bg-dark: #1c1510; --birch-light: #e7cfa3; --birch-dark: #caa66e;
+    --throne-gold: #d49b27; --fortress-bg: #7a2e1d; --line-ink: #3c2212;
+    --text-main: #f4e6cc; --text-muted: #c7b08a; --accent-gold: #e5b244;
+  }
+  * { box-sizing: border-box; user-select: none; }
+  body {
+    margin: 0; padding: 16px;
+    background: radial-gradient(circle at top, #2e2016 0%, var(--bg-dark) 85%);
+    color: var(--text-main); font-family: 'Georgia', 'Times New Roman', serif;
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  }
+  header { text-align: center; max-width: 720px; margin-bottom: 14px; }
+  header h1 {
+    margin: 0 0 4px 0; font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+    letter-spacing: 2px; color: var(--accent-gold); text-transform: uppercase;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+  header .subtitle { font-size: 0.95rem; color: var(--text-muted); font-style: italic; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 14px; max-width: 720px; }
+  button, select {
+    background: linear-gradient(180deg, #52321d 0%, #362011 100%);
+    color: var(--text-main); border: 1px solid #8c6034; border-radius: 6px;
+    padding: 8px 14px; font-family: inherit; font-size: 0.92rem; cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+  }
+  button:hover, select:hover { border-color: var(--accent-gold); background: linear-gradient(180deg, #633d24 0%, #422715 100%); }
+  .status-bar {
+    background: rgba(58, 35, 20, 0.85); border: 1px solid #7d532b; border-radius: 8px;
+    padding: 10px 18px; margin-bottom: 14px; text-align: center;
+    min-width: 300px; max-width: 540px; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  .status-turn { font-size: 1.1rem; font-weight: bold; color: var(--accent-gold); }
+  .status-info { font-size: 0.86rem; color: var(--text-muted); margin-top: 4px; }
+  .board-frame {
+    background: linear-gradient(135deg, #4b2d19 0%, #2b180c 100%);
+    padding: clamp(10px, 2.5vw, 18px); border-radius: 12px;
+    border: 3px solid #8a5e32; box-shadow: 0 12px 32px rgba(0,0,0,0.75);
+  }
+  .board {
+    display: grid; grid-template-columns: repeat(9, clamp(34px, 8.8vw, 54px));
+    grid-template-rows: repeat(9, clamp(34px, 8.8vw, 54px));
+    border: 2px solid var(--line-ink); background: var(--birch-light);
+  }
+  .cell { position: relative; border: 1px solid rgba(60, 34, 18, 0.45); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .cell.light { background-color: var(--birch-light); }
+  .cell.dark { background-color: var(--birch-dark); }
+  .cell.throne { background: radial-gradient(circle, #f3c65f 0%, var(--throne-gold) 80%); }
+  .cell.fortress { background: radial-gradient(circle, #a8422b 0%, var(--fortress-bg) 85%); }
+  .cell-ornament { position: absolute; width: 72%; height: 72%; opacity: 0.36; pointer-events: none; }
+  .cell.throne .cell-ornament, .cell.fortress .cell-ornament { opacity: 0.65; }
+  .cell.valid-move::after {
+    content: ''; position: absolute; width: 34%; height: 34%; border-radius: 50%;
+    background: rgba(34, 139, 34, 0.8); box-shadow: 0 0 8px rgba(50, 205, 50, 0.9);
+    z-index: 3; pointer-events: none;
+  }
+  .cell.last-move { box-shadow: inset 0 0 0 2px rgba(229, 178, 68, 0.85); }
+  .piece {
+    width: 78%; height: 78%; border-radius: 50%; position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.65), inset 0 2px 3px rgba(255,255,255,0.35);
+    transition: transform 0.15s ease;
+  }
+  .piece.selected { transform: scale(1.13); box-shadow: 0 0 14px 3px #ffdf73, 0 4px 8px rgba(0,0,0,0.8); }
+  .piece.king { background: radial-gradient(circle at 30% 30%, #ffe680 0%, #d4941c 65%, #7d5106 100%); border: 2px solid #fff3b8; }
+  .piece.defender { background: radial-gradient(circle at 30% 30%, #fff6e3 0%, #d8bc8c 70%, #8f7245 100%); border: 2px solid #593b1d; }
+  .piece.attacker { background: radial-gradient(circle at 30% 30%, #4f3b32 0%, #241813 70%, #0d0806 100%); border: 2px solid #a87b46; }
+  .piece svg { width: 66%; height: 66%; }
+  .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin-top: 14px; font-size: 0.88rem; color: var(--text-muted); }
+  .legend-item { display: flex; align-items: center; gap: 7px; }
+  .legend-dot { width: 18px; height: 18px; border-radius: 50%; display: inline-block; }
+  footer.author-card {
+    margin-top: 22px; max-width: 680px; width: 100%;
+    background: linear-gradient(180deg, rgba(64, 39, 22, 0.92) 0%, rgba(36, 21, 12, 0.96) 100%);
+    border: 1px solid #8c6034; border-radius: 10px; padding: 16px 20px; text-align: center;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+  }
+  footer.author-card h3 { margin: 0 0 8px 0; color: var(--accent-gold); font-size: 1.05rem; }
+  footer.author-card p { margin: 0 0 12px 0; font-size: 0.9rem; line-height: 1.45; color: var(--text-main); }
+  .cta-buttons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .cta-btn {
+    text-decoration: none; padding: 9px 16px; border-radius: 6px; font-size: 0.9rem;
+    font-weight: bold; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  }
+  .cta-btn.books { background: linear-gradient(180deg, #e5b244 0%, #b8821c 100%); color: #1c1108; border: 1px solid #ffe08a; }
+  .cta-btn.order { background: linear-gradient(180deg, #7a2e1d 0%, #521c10 100%); color: #f7e8ce; border: 1px solid #c96a53; }
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(10, 6, 3, 0.85);
+    z-index: 100; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-box {
+    background: #f2dfb9; color: #2b180c; border: 4px solid #6b4222; border-radius: 10px;
+    max-width: 560px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 22px;
+  }
+  .modal-box h2 { margin-top: 0; color: #6e2414; border-bottom: 2px solid #b58d54; padding-bottom: 8px; }
+  .modal-box ul { padding-left: 20px; line-height: 1.5; }
+  .modal-box li { margin-bottom: 8px; }
+  .modal-close { background: #6e2414; color: #fff6e3; border: none; padding: 9px 18px; margin-top: 10px; font-weight: bold; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Тавлеи Древней Руси</h1>
+  <div class="subtitle">Историческая настольная стратегия IX–XI вв. • Реконструкция Сергея Крюкова</div>
+</header>
+<div class="controls">
+  <select id="gameMode" onchange="resetGame()">
+    <option value="ai_defender">Играть за Русь (Князь) против ИИ</option>
+    <option value="ai_attacker">Играть за Нападающих против ИИ</option>
+    <option value="pvp">Вдвоем на одном экране</option>
+  </select>
+  <select id="aiLevel" onchange="resetGame()">
+    <option value="1">Уровень: Отрок (лёгкий)</option>
+    <option value="2" selected>Уровень: Дружинник (средний)</option>
+    <option value="3">Уровень: Воевода (сложный)</option>
+  </select>
+  <button onclick="resetGame()">Новая сеча</button>
+  <button onclick="undoMove()">Отменить ход</button>
+  <button onclick="openRules()">Свиток правил</button>
+</div>
+<div class="status-bar">
+  <div class="status-turn" id="turnText">Ход Нападающих (тёмные)</div>
+  <div class="status-info" id="infoText">Нападающие начинают первыми. Выберите воина для хода.</div>
+</div>
+<div class="board-frame"><div class="board" id="board"></div></div>
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot" style="background:#d4941c; border:1px solid #fff3b8;"></span><span>Князь (цель — угловая Крепость)</span></div>
+  <div class="legend-item"><span class="legend-dot" style="background:#d8bc8c; border:1px solid #593b1d;"></span><span>Дружина Руси (8 воинов)</span></div>
+  <div class="legend-item"><span class="legend-dot" style="background:#241813; border:1px solid #a87b46;"></span><span>Нападающие (16 воинов)</span></div>
+</div>
+<footer class="author-card">
+  <h3>Авторская реконструкция и мастерская Сергея Крюкова</h3>
+  <p>Понравилась древнерусская стратегия? Читайте книги автора на Литрес (<strong>буду рад любому донату!</strong>) или закажите физический подарочный набор <strong>«Тавлеи»</strong> ручной работы (в архитектурном бетоне, массиве дальневосточного дерева или индивидуальном исполнении).</p>
+  <div class="cta-buttons">
+    <a class="cta-btn books" href="https://lit.to/exrwta" target="_blank" rel="noopener noreferrer">📚 Книги автора на Литрес (буду рад любому донату)</a>
+    <button type="button" class="cta-btn order" onclick="copyOrderEmail()">✉️ Заказать набор «Тавлеи»: cepera744@gmail.com</button>
+  </div>
+  <div id="emailCopiedBox" style="display:none; margin-top:10px; padding:8px; background:rgba(34,139,34,0.25); border:1px solid #6fdc6f; border-radius:6px; color:#9eff9e; font-size:0.9rem;">
+    ✅ Почта <strong>cepera744@gmail.com</strong> скопирована! Вставьте её (Ctrl+V) в любое письмо для заказа набора.
+  </div>
+</footer>
+<div class="modal-overlay" id="rulesModal">
+  <div class="modal-box">
+    <h2>Свиток правил «Тавлей» (9×9)</h2>
+    <ul>
+      <li><strong>Две неравные силы:</strong> В центре на золотом Троне стоит Князь в окружении 8 Дружинников. По краям доски четырьмя отрядами стоят 16 Нападающих. Первыми всегда ходят Нападающие.</li>
+      <li><strong>Как ходят фигуры:</strong> Все воины и сам Князь ходят как шахматная ладья — на любое число свободных клеток по вертикали или горизонтали (перепрыгивать через фигуры нельзя).</li>
+      <li><strong>Запретные клетки:</strong> На центральный Трон и в 4 угловые Крепости может вставать только Князь. Обычные воины могут лишь пролетать мимо пустого Трона.</li>
+      <li><strong>Взятие в тиски:</strong> Вражеский воин (кроме Князя) снимается с доски, если зажать его с двух противоположных сторон своими фигурами. Угловая Крепость и пустой Трон также помогают зажать врага как наковальня.</li>
+      <li><strong>Победа Руси:</strong> Князь прорвал осаду и встал на любую из 4 угловых Крепостей.</li>
+      <li><strong>Победа Нападающих:</strong> Князь окружён врагами со всех 4 сторон (или с 3 сторон у края доски либо у пустого Трона).</li>
+    </ul>
+    <button class="modal-close" onclick="closeRules()">Понятно, в бой!</button>
+  </div>
+</div>
+<div class="modal-overlay" id="winModal">
+  <div class="modal-box" style="text-align:center;">
+    <h2 id="winTitle">Победа!</h2>
+    <p id="winDesc" style="font-size:1.05rem; line-height:1.5;"></p>
+    <div class="cta-buttons" style="margin: 16px 0;">
+      <a class="cta-btn books" href="https://lit.to" target="_blank" rel="noopener noreferrer">📚 Книги автора (буду рад любому донату)</a>
+      <button type="button" class="cta-btn order" onclick="copyOrderEmail()">✉️ Заказать каменные/деревянные Тавлеи</button>
+    </div>
+    <button class="modal-close" onclick="closeWinAndReset()">Сыграть ещё раз</button>
+  </div>
+</div>
+<script>
+  const SIZE = 9;
+  const SETUP_ROWS = ["000111000","000010000","000020000","100020001","112232211","100020001","000020000","000010000","000111000"];
+  const DIRS = [{dr:-1,dc:0},{dr:1,dc:0},{dr:0,dc:-1},{dr:0,dc:1}];
+  const CORNERS = [{r:0,c:0},{r:0,c:8},{r:8,c:0},{r:8,c:8}];
+  let board = [], currentTurn = 'attacker', selected = null, validMoves = [], gameOver = false, history = [], lastMove = null, aiTimeout = null;
+
+  const SVG_ALATYR = '<svg viewBox="0 0 100 100" fill="none" stroke="#4a1d0b" stroke-width="6"><polygon points="50,8 62,38 92,50 62,62 50,92 38,62 8,50 38,38" fill="rgba(255,235,160,0.45)"/><polygon points="22,22 50,35 78,22 65,50 78,78 50,65 22,78 35,50"/></svg>';
+  const SVG_SOLAR = '<svg viewBox="0 0 100 100" fill="none" stroke="#5c3618" stroke-width="5"><circle cx="50" cy="50" r="24"/><path d="M50 12 L50 88 M12 50 L88 50 M23 23 L77 77 M77 23 L23 77"/><circle cx="50" cy="50" r="8" fill="#5c3618"/></svg>';
+  const SVG_KING_PIECE = '<svg viewBox="0 0 100 100" fill="none" stroke="#593204" stroke-width="7"><polygon points="50,10 62,38 90,50 62,62 50,90 38,62 10,50 38,38" fill="#fff5c0"/><circle cx="50" cy="50" r="10" fill="#593204"/></svg>';
+  const SVG_DEFENDER_PIECE = '<svg viewBox="0 0 100 100" fill="none" stroke="#4a2e14" stroke-width="8"><circle cx="50" cy="50" r="28"/><path d="M50 14 L50 86 M14 50 L86 50"/></svg>';
+  const SVG_ATTACKER_PIECE = '<svg viewBox="0 0 100 100" fill="none" stroke="#d49b4b" stroke-width="7"><polygon points="50,14 86,50 50,86 14,50"/><circle cx="50" cy="50" r="9" fill="#d49b4b"/></svg>';
+
+  function isFortress(r, c) { return (r === 0 || r === 8) && (c === 0 || c === 8); }
+  function isThrone(r, c) { return r === 4 && c === 4; }
+  function isSolarDecor(r, c) { return (r === 2 || r === 6) && (c === 2 || c === 6); }
+  function cloneBoard(s) { return s.map(function(row) { return row.slice(); }); }
+
+  function resetGame() {
+    if (aiTimeout) clearTimeout(aiTimeout);
+    board = SETUP_ROWS.map(function(r) { return r.split('').map(Number); });
+    currentTurn = 'attacker'; selected = null; validMoves = []; gameOver = false; history = []; lastMove = null;
+    const mode = document.getElementById('gameMode').value;
+    document.getElementById('aiLevel').style.display = (mode === 'pvp') ? 'none' : 'inline-block';
+    renderBoard(); updateStatus(0); triggerAiIfNeeded();
+  }
+
+  function undoMove() {
+    if (gameOver || history.length === 0) return;
+    if (aiTimeout) clearTimeout(aiTimeout);
+    if (document.getElementById('gameMode').value !== 'pvp' && history.length >= 2) history.pop();
+    const prev = history.pop();
+    board = prev.board; currentTurn = prev.turn; lastMove = prev.lastMove; selected = null; validMoves = [];
+    renderBoard(); updateStatus(0);
+  }
+
+  function getValidMoves(r, c, state) {
+    const piece = state[r][c]; if (!piece) return [];
+    const moves = [];
+    for (let i = 0; i < 4; i++) {
+      let nr = r + DIRS[i].dr, nc = c + DIRS[i].dc;
+      while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE) {
+        if (state[nr][nc] !== 0) break;
+        if ((isFortress(nr, nc) || isThrone(nr, nc)) && piece !== 3) {
+          if (isThrone(nr, nc)) { nr += DIRS[i].dr; nc += DIRS[i].dc; continue; }
+          break;
+        }
+        moves.push({ r: nr, c: nc }); nr += DIRS[i].dr; nc += DIRS[i].dc;
+      }
+    }
+    return moves;
+  }
+
+  function isHostile(r, c, movingPiece, state) {
+    if (isFortress(r, c) || (isThrone(r, c) && state[r][c] === 0)) return true;
+    const t = state[r][c]; if (t === 0) return false;
+    return movingPiece === 1 ? t === 1 : (t === 2 || t === 3);
+  }
+
+  function applyMove(state, fr, fc, tr, tc) {
+    const ns = cloneBoard(state), piece = ns[fr][fc];
+    ns[fr][fc] = 0; ns[tr][tc] = piece;
+    let cap = 0;
+    for (let i = 0; i < 4; i++) {
+      const ar = tr + DIRS[i].dr, ac = tc + DIRS[i].dc, or = tr + DIRS[i].dr * 2, oc = tc + DIRS[i].dc * 2;
+      if (or < 0 || or >= SIZE || oc < 0 || oc >= SIZE) continue;
+      const v = ns[ar][ac];
+      if (v === 0 || v === 3) continue;
+      const enemy = (piece === 1 && v === 2) || ((piece === 2 || piece === 3) && v === 1);
+      if (enemy && isHostile(or, oc, piece, ns)) { ns[ar][ac] = 0; cap++; }
+    }
+    return { state: ns, captured: cap };
+  }
+
+  function checkWinner(state) {
+    let kp = null, att = 0;
+    for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+      if (state[r][c] === 3) kp = { r: r, c: c };
+      if (state[r][c] === 1) att++;
+    }
+    if (!kp) return 'attacker';
+    if (isFortress(kp.r, kp.c) || att === 0) return 'defender';
+    let sur = 0;
+    for (let i = 0; i < 4; i++) {
+      const nr = kp.r + DIRS[i].dr, nc = kp.c + DIRS[i].dc;
+      if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE || state[nr][nc] === 1 || (isThrone(nr, nc) && state[nr][nc] === 0)) sur++;
+    }
+    return sur === 4 ? 'attacker' : null;
+  }
+
+  function getAllMoves(state, side) {
+    const list = [];
+    for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+      const p = state[r][c];
+      if ((side === 'attacker' && p === 1) || (side === 'defender' && (p === 2 || p === 3))) {
+        const ms = getValidMoves(r, c, state);
+        for (let i = 0; i < ms.length; i++) list.push({ fr: r, fc: c, tr: ms[i].r, tc: ms[i].c });
+      }
+    }
+    return list;
+  }
+  function evaluate(state, aiSide) {
+    const w = checkWinner(state);
+    if (w === aiSide) return 100000;
+    if (w && w !== aiSide) return -100000;
+    let kp = null, att = 0, def = 0, blockBonus = 0;
+    for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+      if (state[r][c] === 1) { att++; if ((r === 1 || r === 7) && (c === 1 || c === 7)) blockBonus += 55; }
+      if (state[r][c] === 2) def++;
+      if (state[r][c] === 3) kp = { r: r, c: c };
+    }
+    let kScore = 0;
+    if (kp) {
+      let minD = 99;
+      for (let i = 0; i < 4; i++) minD = Math.min(minD, Math.abs(kp.r - CORNERS[i].r) + Math.abs(kp.c - CORNERS[i].c));
+      kScore += (16 - minD) * 45;
+      const km = getValidMoves(kp.r, kp.c, state);
+      kScore += km.length * 22;
+      for (let i = 0; i < km.length; i++) if (isFortress(km[i].r, km[i].c)) kScore += 9000;
+      for (let i = 0; i < 4; i++) {
+        const nr = kp.r + DIRS[i].dr, nc = kp.c + DIRS[i].dc;
+        if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE || state[nr][nc] === 1) kScore -= 210;
+      }
+    }
+    const defVal = (def * 190) - (att * 120) + kScore - blockBonus;
+    return aiSide === 'defender' ? defVal : -defVal;
+  }
+
+  function minimax(state, depth, alpha, beta, maximizing, aiSide) {
+    const w = checkWinner(state);
+    if (depth === 0 || w) return evaluate(state, aiSide);
+    const turnSide = maximizing ? aiSide : (aiSide === 'attacker' ? 'defender' : 'attacker');
+    const moves = getAllMoves(state, turnSide);
+    if (moves.length === 0) return maximizing ? -100000 : 100000;
+    moves.sort(function(a, b) { return (isFortress(b.tr, b.tc) ? 1 : 0) - (isFortress(a.tr, a.tc) ? 1 : 0); });
+    if (maximizing) {
+      let maxEval = -Infinity;
+      for (let i = 0; i < moves.length; i++) {
+        const res = applyMove(state, moves[i].fr, moves[i].fc, moves[i].tr, moves[i].tc);
+        const ev = minimax(res.state, depth - 1, alpha, beta, false, aiSide) + res.captured * 15;
+        if (ev > maxEval) maxEval = ev;
+        if (ev > alpha) alpha = ev;
+        if (beta <= alpha) break;
+      }
+      return maxEval;
+    } else {
+      let minEval = Infinity;
+      for (let i = 0; i < moves.length; i++) {
+        const res = applyMove(state, moves[i].fr, moves[i].fc, moves[i].tr, moves[i].tc);
+        const ev = minimax(res.state, depth - 1, alpha, beta, true, aiSide) - res.captured * 15;
+        if (ev < minEval) minEval = ev;
+        if (ev < beta) beta = ev;
+        if (beta <= alpha) break;
+      }
+      return minEval;
+    }
+  }
+
+  function makeAiMove() {
+    if (gameOver) return;
+    const aiSide = currentTurn, level = Number(document.getElementById('aiLevel').value);
+    const myMoves = getAllMoves(board, aiSide);
+    if (myMoves.length === 0) { gameOver = true; showVictory(aiSide === 'attacker' ? 'defender' : 'attacker'); return; }
+    let bestScore = -Infinity, bestMoves = [];
+    const searchDepth = level === 1 ? 0 : (level === 2 ? 1 : 2);
+    const noise = level === 1 ? 85 : (level === 2 ? 12 : 2);
+    for (let i = 0; i < myMoves.length; i++) {
+      const m = myMoves[i], res = applyMove(board, m.fr, m.fc, m.tr, m.tc);
+      if (checkWinner(res.state) === aiSide) { executeMove(m.fr, m.fc, m.tr, m.tc); return; }
+      const score = minimax(res.state, searchDepth, -Infinity, Infinity, false, aiSide) + res.captured * 25 + (Math.random() * noise);
+      if (score > bestScore) { bestScore = score; bestMoves = [m]; }
+      else if (Math.abs(score - bestScore) < 3) bestMoves.push(m);
+    }
+    const ch = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+    executeMove(ch.fr, ch.fc, ch.tr, ch.tc);
+  }
+
+  function handleCellClick(r, c) {
+    if (gameOver) return;
+    const mode = document.getElementById('gameMode').value;
+    if ((mode === 'ai_defender' && currentTurn === 'attacker') || (mode === 'ai_attacker' && currentTurn === 'defender')) return;
+    const p = board[r][c];
+    if ((currentTurn === 'attacker' && p === 1) || (currentTurn === 'defender' && (p === 2 || p === 3))) {
+      selected = { r: r, c: c }; validMoves = getValidMoves(r, c, board); renderBoard(); return;
+    }
+    if (selected && validMoves.some(function(m) { return m.r === r && m.c === c; })) executeMove(selected.r, selected.c, r, c);
+  }
+
+  function executeMove(fr, fc, tr, tc) {
+    history.push({ board: cloneBoard(board), turn: currentTurn, lastMove: lastMove ? Object.assign({}, lastMove) : null });
+    const res = applyMove(board, fr, fc, tr, tc);
+    board = res.state; lastMove = { fromR: fr, fromC: fc, toR: tr, toC: tc }; selected = null; validMoves = [];
+    const w = checkWinner(board); renderBoard();
+    if (w) { gameOver = true; showVictory(w); return; }
+    currentTurn = currentTurn === 'attacker' ? 'defender' : 'attacker';
+    updateStatus(res.captured); triggerAiIfNeeded();
+  }
+
+  function triggerAiIfNeeded() {
+    if (gameOver) return;
+    const mode = document.getElementById('gameMode').value, lvl = document.getElementById('aiLevel').value;
+    if ((mode === 'ai_defender' && currentTurn === 'attacker') || (mode === 'ai_attacker' && currentTurn === 'defender')) {
+      const label = lvl === '1' ? 'Отрок' : (lvl === '2' ? 'Дружинник' : 'Воевода');
+      document.getElementById('infoText').textContent = 'Соперник (' + label + ') обдумывает ход...';
+      aiTimeout = setTimeout(makeAiMove, 320);
+    }
+  }
+
+  function renderBoard() {
+    const el = document.getElementById('board'); el.innerHTML = '';
+    for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+      if (isThrone(r, c)) { cell.classList.add('throne'); cell.innerHTML = '<div class="cell-ornament">' + SVG_ALATYR + '</div>'; }
+      else if (isFortress(r, c)) { cell.classList.add('fortress'); cell.innerHTML = '<div class="cell-ornament">' + SVG_ALATYR + '</div>'; }
+      else if (isSolarDecor(r, c)) { cell.innerHTML = '<div class="cell-ornament">' + SVG_SOLAR + '</div>'; }
+      if (lastMove && ((lastMove.fromR === r && lastMove.fromC === c) || (lastMove.toR === r && lastMove.toC === c))) cell.classList.add('last-move');
+      if (validMoves.some(function(m) { return m.r === r && m.c === c; })) cell.classList.add('valid-move');
+      const pv = board[r][c];
+      if (pv !== 0) {
+        const piece = document.createElement('div');
+        piece.className = 'piece ' + (pv === 3 ? 'king' : pv === 2 ? 'defender' : 'attacker');
+        if (selected && selected.r === r && selected.c === c) piece.classList.add('selected');
+        piece.innerHTML = pv === 3 ? SVG_KING_PIECE : pv === 2 ? SVG_DEFENDER_PIECE : SVG_ATTACKER_PIECE;
+        cell.appendChild(piece);
+      }
+      (function(ri, ci) { cell.onclick = function() { handleCellClick(ri, ci); }; })(r, c);
+      el.appendChild(cell);
+    }
+  }
+
+  function updateStatus(cap) {
+    const t = document.getElementById('turnText'), info = document.getElementById('infoText');
+    t.textContent = currentTurn === 'attacker' ? 'Ход Нападающих (тёмные)' : 'Ход Дружины Руси (светлые и Князь)';
+    t.style.color = currentTurn === 'attacker' ? '#e0a96d' : '#ffd970';
+    info.textContent = cap > 0 ? ('Взятие в тиски! Повержено воинов: ' + cap + '.') : 'Выберите свою фигуру и укажите клетку для хода.';
+  }
+
+  function showVictory(w) {
+    document.getElementById('winTitle').textContent = w === 'defender' ? 'Слава Руси! Князь прорвал осаду!' : 'Осада сомкнулась! Победа Нападающих!';
+    document.getElementById('winDesc').textContent = w === 'defender' ? 'Князь благополучно достиг угловой Крепости, дружина выстояла в сече.' : 'Кольцо врагов замкнулось вокруг Князя, путь к Крепостям отрезан.';
+    document.getElementById('winModal').classList.add('active');
+  }
+
+  function copyOrderEmail() {
+    if (navigator.clipboard) navigator.clipboard.writeText('cepera744@gmail.com');
+    const box = document.getElementById('emailCopiedBox');
+    if (box) box.style.display = 'block';
+    alert('Почта cepera744@gmail.com скопирована! Вставьте её (Ctrl+V) в любое письмо для заказа набора.');
+  }
+
+  function openRules() { document.getElementById('rulesModal').classList.add('active'); }
+  function closeRules() { document.getElementById('rulesModal').classList.remove('active'); }
+  function closeWinAndReset() { document.getElementById('winModal').classList.remove('active'); resetGame(); }
+
+  resetGame();
+</script>
+</body>
+</html>
