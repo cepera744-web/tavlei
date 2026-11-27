@@ -103,40 +103,39 @@
   .modal-box h2 { margin-top: 0; color: #6e2414; border-bottom: 2px solid #b58d54; padding-bottom: 8px; }
   .modal-box ul { padding-left: 20px; line-height: 1.5; }
   .modal-box li { margin-bottom: 8px; }
-  .modal-close { background: #6e2414; color: #fff6e3; border: none; padding: 9px 18px; margin-top: 10px; font-weight: bold; /* Объёмные 3D-фигуры для Тавлей */
+  .modal-close { background: #6e2414; color: #fff6e3; border: none; padding: 9px 18px; margin-top: 10px; font-weight: bold; }
 .piece {
-  position: relative;
-  border-radius: 50%;
+  width: 80%; height: 80%; border-radius: 50%;
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
   transform: translateY(-4px);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 .piece::after {
-  content: '';
-  position: absolute;
-  top: 12%; left: 16%;
-  width: 34%; height: 24%;
+  content: ''; position: absolute;
+  top: 10%; left: 15%; width: 36%; height: 24%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 75%);
+  background: radial-gradient(circle, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 75%);
   pointer-events: none;
 }
 .piece.king {
   background: radial-gradient(circle at 35% 30%, #fff59d 0%, #fbc02d 45%, #b26a00 88%, #5d3200 100%) !important;
-  box-shadow: 0 7px 0 #6d3b00, 0 12px 16px rgba(0,0,0,0.65), inset 0 2px 4px rgba(255,255,255,0.85) !important;
+  box-shadow: 0 7px 0 #6d3b00, 0 13px 18px rgba(0,0,0,0.75), inset 0 2px 4px rgba(255,255,255,0.9) !important;
   border: 2px solid #ffe082 !important;
 }
 .piece.defender {
   background: radial-gradient(circle at 35% 30%, #ffffff 0%, #f3e5c2 48%, #bfa06a 90%, #6e5227 100%) !important;
-  box-shadow: 0 6px 0 #7a5c2e, 0 10px 14px rgba(0,0,0,0.55), inset 0 2px 3px rgba(255,255,255,0.9) !important;
+  box-shadow: 0 6px 0 #7a5c2e, 0 11px 15px rgba(0,0,0,0.65), inset 0 2px 3px rgba(255,255,255,0.95) !important;
   border: 2px solid #fff8e1 !important;
 }
 .piece.attacker {
-  background: radial-gradient(circle at 35% 30%, #6d5e58 0%, #372c28 50%, #17110f 92%, #000000 100%) !important;
-  box-shadow: 0 6px 0 #0f0a08, 0 10px 14px rgba(0,0,0,0.7), inset 0 2px 3px rgba(255,255,255,0.35) !important;
+  background: radial-gradient(circle at 35% 30%, #75655e 0%, #372c28 50%, #17110f 92%, #000000 100%) !important;
+  box-shadow: 0 6px 0 #0f0a08, 0 11px 15px rgba(0,0,0,0.8), inset 0 2px 3px rgba(255,255,255,0.4) !important;
   border: 2px solid #8d6e63 !important;
 }
 .piece.selected {
-  transform: translateY(-9px) scale(1.08) !important;
-  box-shadow: 0 13px 20px rgba(255, 213, 79, 0.75), 0 6px 0 #b26a00 !important;
+  transform: translateY(-10px) scale(1.1) !important;
+  box-shadow: 0 14px 22px rgba(255, 213, 79, 0.85), 0 6px 0 #b26a00 !important;
 }
 </style>
 </head>
@@ -163,7 +162,7 @@
 <div class="status-bar">
   <div class="status-turn" id="turnText">Ход Нападающих (тёмные)</div>
   <div class="status-info" id="infoText">Нападающие начинают первыми. Выберите воина для хода.</div>
-</div>
+</div><a href="11x11.html" style="text-decoration:none;"><button type="button">⚔️ Доска 11×11 (3D)</button></a>
 <div class="board-frame"><div class="board" id="board"></div></div>
 <div class="legend">
   <div class="legend-item"><span class="legend-dot" style="background:#d4941c; border:1px solid #fff3b8;"></span><span>Князь (цель — угловая Крепость)</span></div>
