@@ -48,6 +48,9 @@
     display: grid; grid-template-columns: repeat(9, clamp(34px, 8.8vw, 54px));
     grid-template-rows: repeat(9, clamp(34px, 8.8vw, 54px));
     border: 2px solid var(--line-ink); background: var(--birch-light);
+  }  .board.size-11 {
+    grid-template-columns: repeat(11, clamp(28px, 7.6vw, 48px));
+    grid-template-rows: repeat(11, clamp(28px, 7.6vw, 48px));
   }
   .cell { position: relative; border: 1px solid rgba(60, 34, 18, 0.45); display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .cell.light { background-color: var(--birch-light); }
@@ -158,7 +161,10 @@
   <button onclick="resetGame()">Новая сеча</button>
   <button onclick="undoMove()">Отменить ход</button>
   <button onclick="openRules()">Свиток правил</button>
-<a href="11x11.html" style="text-decoration:none;"><button type="button">⚔️ Доска 11×11 (3D)</button></a>
+  <select id="boardSize" onchange="resetGame()">
+    <option value="9" selected>Доска: 9×9 (Классика)</option>
+    <option value="11">Доска: 11×11 (Большая сеча)</option>
+  </select>
 </div>
 <div class="status-bar">
   <div class="status-turn" id="turnText">Ход Нападающих (тёмные)</div>
@@ -206,10 +212,14 @@
   </div>
 </div>
 <script>
-  const SIZE = 9;
-  const SETUP_ROWS = ["000111000","000010000","000020000","100020001","112232211","100020001","000020000","000010000","000111000"];
+   let SIZE = 9;
+  const SETUP_9 = ["000111000","000010000","000020000","100020001","112232211","100020001","000020000","000010000","000111000"];
+  const SETUP_11 = [
+    "00011111000","00000100000","00000000000","10000200001","10002220001",
+    "11022322011","10002220001","10000200001","00000000000","00000100000","00011111000"
+  ];
   const DIRS = [{dr:-1,dc:0},{dr:1,dc:0},{dr:0,dc:-1},{dr:0,dc:1}];
-  const CORNERS = [{r:0,c:0},{r:0,c:8},{r:8,c:0},{r:8,c:8}];
+  let CORNERS = [{r:0,c:0},{r:0,c:8},{r:8,c:0},{r:8,c:8}];
   let board = [], currentTurn = 'attacker', selected = null, validMoves = [], gameOver = false, history = [], lastMove = null, aiTimeout = null;
 
   const SVG_ALATYR = '<svg viewBox="0 0 100 100" fill="none" stroke="#4a1d0b" stroke-width="6"><polygon points="50,8 62,38 92,50 62,62 50,92 38,62 8,50 38,38" fill="rgba(255,235,160,0.45)"/><polygon points="22,22 50,35 78,22 65,50 78,78 50,65 22,78 35,50"/></svg>';
@@ -218,14 +228,19 @@
   const SVG_DEFENDER_PIECE = '<svg viewBox="0 0 100 100" fill="none" stroke="#4a2e14" stroke-width="8"><circle cx="50" cy="50" r="28"/><path d="M50 14 L50 86 M14 50 L86 50"/></svg>';
   const SVG_ATTACKER_PIECE = '<svg viewBox="0 0 100 100" fill="none" stroke="#d49b4b" stroke-width="7"><polygon points="50,14 86,50 50,86 14,50"/><circle cx="50" cy="50" r="9" fill="#d49b4b"/></svg>';
 
-  function isFortress(r, c) { return (r === 0 || r === 8) && (c === 0 || c === 8); }
-  function isThrone(r, c) { return r === 4 && c === 4; }
-  function isSolarDecor(r, c) { return (r === 2 || r === 6) && (c === 2 || c === 6); }
+  function isFortress(r, c) { return (r === 0 || r === SIZE - 1) && (c === 0 || c === SIZE - 1); }
+  function isThrone(r, c) { const mid = Math.floor(SIZE / 2); return r === mid && c === mid; }
+  function isSolarDecor(r, c) { return (r === 2 || r === SIZE - 3) && (c === 2 || c === SIZE - 3); }
   function cloneBoard(s) { return s.map(function(row) { return row.slice(); }); }
 
   function resetGame() {
-    if (aiTimeout) clearTimeout(aiTimeout);
-    board = SETUP_ROWS.map(function(r) { return r.split('').map(Number); });
+    if (aiTimeout) clearTimeout(aiTimeout); 
+  SIZE = Number(document.getElementById('boardSize').value);
+ CORNERS = [{r:0,c:0},{r:0,c:SIZE-1},{r:SIZE-1,c:0},{r:SIZE-1,c:SIZE-1}];
+ const boardEl = document.getElementById('board');
+ boardEl.className = SIZE === 11 ? 'board size-11' : 'board';
+ const setup = SIZE === 11 ? SETUP_11 : SETUP_9;
+ board = setup.map(function(r) { return r.split('').map(Number); });
     currentTurn = 'attacker'; selected = null; validMoves = []; gameOver = false; history = []; lastMove = null;
     const mode = document.getElementById('gameMode').value;
     document.getElementById('aiLevel').style.display = (mode === 'pvp') ? 'none' : 'inline-block';
@@ -312,7 +327,7 @@
     if (w && w !== aiSide) return -100000;
     let kp = null, att = 0, def = 0, blockBonus = 0;
     for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
-      if (state[r][c] === 1) { att++; if ((r === 1 || r === 7) && (c === 1 || c === 7)) blockBonus += 55; }
+      if (state[r][c] === 1) { att++; if ((r === 1 || r === SIZE - 2) && (c === 1 || c === SIZE - 2)) blockBonus += 55; }
       if (state[r][c] === 2) def++;
       if (state[r][c] === 3) kp = { r: r, c: c };
     }
@@ -320,7 +335,7 @@
     if (kp) {
       let minD = 99;
       for (let i = 0; i < 4; i++) minD = Math.min(minD, Math.abs(kp.r - CORNERS[i].r) + Math.abs(kp.c - CORNERS[i].c));
-      kScore += (16 - minD) * 45;
+      kScore += ((SIZE * 2 - 2) - minD) * 45;
       const km = getValidMoves(kp.r, kp.c, state);
       kScore += km.length * 22;
       for (let i = 0; i < km.length; i++) if (isFortress(km[i].r, km[i].c)) kScore += 9000;
